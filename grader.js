@@ -24,6 +24,7 @@ References:
 var fs = require('fs');
 var program = require('commander');
 var cheerio = require('cheerio');
+var rest = require('restler');
 var HTMLFILE_DEFAULT = "index.html";
 var CHECKSFILE_DEFAULT = "checks.json";
 
@@ -44,8 +45,7 @@ var loadChecks = function(checksfile) {
     return JSON.parse(fs.readFileSync(checksfile));
 };
 
-var checkHtmlFile = function(htmlfile, checksfile) {
-    $ = cheerioHtmlFile(htmlfile);
+var checkHtmlFile = function($, checksfile) {
     var checks = loadChecks(checksfile).sort();
     var out = {};
     for(var ii in checks) {
@@ -53,6 +53,20 @@ var checkHtmlFile = function(htmlfile, checksfile) {
         out[checks[ii]] = present;
     }
     return out;
+};
+
+var buildfn = function(url, checksfile) {
+    var response2console = function(result, response) {
+        if (result instanceof Error) {
+            console.error('Error: ' + util.format(response.message));
+        } else {
+          $ = cheerio.load(result);
+          var checkJson = checkHtmlFile($, checksfile);
+          var outJson = JSON.stringify(checkJson, null, 4);
+          console.log(outJson);
+        }
+    };
+    return response2console;
 };
 
 var clone = function(fn) {
@@ -65,10 +79,17 @@ if(require.main == module) {
     program
         .option('-c, --checks <check_file>', 'Path to checks.json', clone(assertFileExists), CHECKSFILE_DEFAULT)
         .option('-f, --file <html_file>', 'Path to index.html', clone(assertFileExists), HTMLFILE_DEFAULT)
+        .option('-u, --url <html_address>', 'Path to index.html')
         .parse(process.argv);
-    var checkJson = checkHtmlFile(program.file, program.checks);
-    var outJson = JSON.stringify(checkJson, null, 4);
-    console.log(outJson);
+    if (program.url != null) {
+      var response2console = buildfn(program.url, program.checks);
+      rest.get(program.url).on('complete', response2console);
+    } else {
+      $ = cheerioHtmlFile(program.file);
+      var checkJson = checkHtmlFile($, program.checks);
+      var outJson = JSON.stringify(checkJson, null, 4);
+      console.log(outJson);
+    }
 } else {
     exports.checkHtmlFile = checkHtmlFile;
 }
