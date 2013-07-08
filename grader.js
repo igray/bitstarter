@@ -55,15 +55,19 @@ var checkHtmlFile = function($, checksfile) {
     return out;
 };
 
+var processHtml = function($, checksfile) {
+  var checkJson = checkHtmlFile($, checksfile);
+  var outJson = JSON.stringify(checkJson, null, 4);
+  console.log(outJson);
+};
+
 var buildfn = function(url, checksfile) {
     var response2console = function(result, response) {
         if (result instanceof Error) {
             console.error('Error: ' + util.format(response.message));
         } else {
           $ = cheerio.load(result);
-          var checkJson = checkHtmlFile($, checksfile);
-          var outJson = JSON.stringify(checkJson, null, 4);
-          console.log(outJson);
+          processHtml($, checksfile);
         }
     };
     return response2console;
@@ -86,9 +90,7 @@ if(require.main == module) {
       rest.get(program.url).on('complete', response2console);
     } else {
       $ = cheerioHtmlFile(program.file);
-      var checkJson = checkHtmlFile($, program.checks);
-      var outJson = JSON.stringify(checkJson, null, 4);
-      console.log(outJson);
+      processHtml($, program.checks);
     }
 } else {
     exports.checkHtmlFile = checkHtmlFile;
